@@ -1405,14 +1405,50 @@ $(function(){
 	};
 
 	// GNB
-	$('#gnb').hanaGNB(option);
+	var gnb = (function(gnb){
+		var dropmenu_links = gnb.find('a.ui_dropmenu');
+
+		// 탭순서를 위한 키이벤트 바인딩
+		gnb.on('keydown', 'a.ui_dropmenu', function(e) {
+			var index = dropmenu_links.index(this);
+			if (index > 0 && e.which == 9 && e.shiftKey) {					
+				var self = $(this), 
+					prev = dropmenu_links.eq(index - 1).parent(),
+					prev_con = prev.parent(),
+					layer;
+				
+				if (prev.length === 0) return;
+				e.preventDefault();
+
+				prev.trigger('mouseenter'), layer = prev.find('>div');
+				if (prev_con.hasClass('depth1_navi')) {
+					if (layer.find('ul.btn_sort>li.on').addClass('list_type')) {
+						layer.find('div.depth2_list a:last').focus();
+					} else {
+						layer.find('div.deapth2_img a:last').focus();
+					}
+				} else if (prev_con.hasClass('util_menu')) {
+					layer.find('a:last').focus();
+				}
+			}
+		});
+		return gnb;
+	})($('#gnb').hanaGNB(option));
 
 	(function(loc) {
 		if (loc.length == 0) return;
 
 		// Location
 		loc.hanaLocation(option);
-	})($('#location_wrap'))
+
+		// 탭키
+		loc.find('ul.location_wrap>li').first().find('a').on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {
+				e.preventDefault();
+				gnb.find('ul.depth1_navi>li:last').trigger('mouseenter').find('>div a:last').focus();
+			}
+		});
+	})($('#location_wrap'));
 
 	// 대다수의 페이지에 공유하기 버튼이 존재하기에 강제로 바인딩
 	$('div.sns_wrap').hanaShare();
