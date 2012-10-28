@@ -4,13 +4,14 @@ __app__.prefix = 'hana';
 hana = __app__ = (function(app){
     var has = Object.prototype.hasOwnProperty, 
 		toStr = Object.prototype.toString,
-		console = $.browser.ie ? {log:function(){}} : console;
+		console = $.browser.ie ? {log:function(){}} : console,
+		isTouch = 'ontouchstart' in document.documentElement;
     
 	return {
 		// 터치 디바이스 여부
-		isTouch : 'ontouchstart' in document.documentElement,
+		isTouch : isTouch,
 		// 마우스디바이스 여부
-		isMouse : !('ontouchstart' in document.documentElement),
+		isMouse : !isTouch,
 		// 네임스페이스 생성
 		namespace : function(ns){
 			var parts = ns.split("."), parent = app.prefix ? window[app.prefix] : window, i;
@@ -135,13 +136,13 @@ hana = __app__ = (function(app){
 	// 엘리먼트에 호버 효과 적용
 	$.fn.hoverClass = function(c){
 		return this.each(function(){
-			var T = $(this).unbind('.hover');
+			var T = $(this).off('.hana');
 
-			T.bind({
-				'mouseenter.hover': function(e){
+			T.on({
+				'mouseenter.hana': function(e){
 					T.addClass('on');
 				}, 
-				'mouseleave.hover': function(e){
+				'mouseleave.hana': function(e){
 					T.removeClass('on');
 				}
 			});
@@ -242,7 +243,7 @@ hana = __app__ = (function(app){
 				}
 			};
 
-			C.unbind().bind('selectstart', function (e) { e.preventDefault(); }).swipe(swipeOptions);
+			C.off('.hana').on('selectstart.hana', function (e) { e.preventDefault(); }).swipe(swipeOptions);
 		}
 		
 		return this.each(function(i){
@@ -300,7 +301,7 @@ hana = __app__ = (function(app){
 			}			
 			
 			if(app.isMouse) B.hoverClass('on');
-			B.bind('click', function(e){
+			B.on('click', function(e){
 				e.preventDefault();
 				
 				var self = $(this), dim = self.data('dim');
@@ -319,18 +320,18 @@ hana = __app__ = (function(app){
 						if(timer) { clearInterval(timer); timer = null; }
 					};
 
-				B.bind('mousedown', function(e){
+				B.on('mousedown', function(e){
 					var S = $(this),
 						t = S.data('dim') == 1 ? N : P;
 					stopTimer();
 					timer = setInterval(function(){
 						t.trigger('click');
 					}, 700);
-				}).bind('mouseup', function(e){
+				}).on('mouseup', function(e){
 					stopTimer();
 				});			
 				
-				C.bind('click', function(){
+				C.on('click', function(){
 					stopTimer();			
 				});
 			})(), /*app.isTouch && */swipe($(this));
@@ -371,7 +372,7 @@ hana = __app__ = (function(app){
 				if (option.onTabsInit) {
 					option.onTabsInit.call(self, idx);
 				}
-				btn.bind('click', function(e){				
+				btn.on('click', function(e){				
 					// 탭별로 국가명_인덱스 에 해당하는 className으로 변경
 					var tn = getTabNumber($this[0].className);
 					tn && $this
@@ -392,28 +393,31 @@ hana = __app__ = (function(app){
 	$.fn.hanaGlobalTabs = $.fn.hanaTabs;
 
 	// 페이지내에서 레이어가 단일로 표시되도록 관리 하기위한 ...
-	var popupManager = app.popupManager = {
-		activeDropbox: null,
-		activeMenu: null,
-		hide: function(){
-			this.activeDropbox && this.activeDropbox.hide();
-			this.activeMenu && this.activeMenu.removeClass('on');
-		},
-		show: function(menu, box) {
-			this.hide();
-			menu && menu.addClass('on'), box && box.show();
-			this.activeDropbox = box, this.activeMenu = menu;
-		}
-	};
+	var popupManager = app.popupManager = (function(){
+		var activeDropbox = null, activeMenu = null;
 
+		// 레이어영역 밖에서 터치/마우스다운일 때 열려있는 레이어가 닫히게 바인딩
+		$(document).on('touchstart mousedown', function(e){
+			var target = $(e.target);
+			if (activeDropbox && target.closest(activeDropbox).size() == 0 && target.closest(activeMenu).size() == 0) {
+				popupManager.hide();
+			}
+		});	
+		
+		return {
+			hide: function(){
+				activeDropbox && activeDropbox.hide();
+				activeMenu && activeMenu.removeClass('on');
+			},
+			show: function(menu, box) {
+				this.hide();
+				menu && menu.addClass('on'), box && box.show();
+				activeDropbox = box, activeMenu = menu;
+			}
+		};
+	})();
 
-	// 레이어영역 밖에서 터치/마우스다운일 때 열려있는 레이어가 닫히게 바인딩
-	$(document).on('touchstart mousedown', function(e){
-		var target = $(e.target);
-		if (popupManager.activeDropbox && target.closest(popupManager.activeDropbox).size() == 0 && target.closest(popupManager.activeMenu).size() == 0) {
-			popupManager.hide();
-		}
-	});			
+	
 			
 	// GNB
 	$.fn.hanaGNB = function(option){
@@ -429,6 +433,8 @@ hana = __app__ = (function(app){
 			if ($.checkBuild(this, 'gnb')) return;
 
 			var gnb = $(this),
+				gnb_menu,
+				util_menu,
 				btn_sort = gnb.find('ul.btn_sort>li'),
 				sub_layers = gnb.find('div.depth2_list, div.deapth2_img'),
 				dropmenu_links = gnb.find('a.ui_dropmenu'),
@@ -466,20 +472,22 @@ hana = __app__ = (function(app){
 
 
 			// pc에서는 페이지 이동, 터치에서는 레이어표시
-			app.isTouch && gnb.on('click', 'a.ui_dropmenu', function(e) {
-				e.preventDefault();
+			if (app.isTouch) {
+				gnb.on('click', 'a.ui_dropmenu', function(e) {
+					e.preventDefault();
 
-				var self = $(this), 
-					parent = self.parent(), 
-					next = self.next(), 
-					isActive = next.is(':visible');
-				
-				isActive && popupManager.hide();
-				!isActive && popupManager.show(parent, next);							
-			});
-		
-			// pc라면
-			if (app.isMouse) {
+					var self = $(this), 
+						parent = self.parent(), 
+						next = self.next(), 
+						isActive = next.is(':visible');
+					
+					isActive && popupManager.hide();
+					!isActive && popupManager.show(parent, next);							
+				});
+			} else if (app.isMouse) {
+				gnb_menu = gnb.find('ul.depth1_navi');
+				util_menu = gnb.find('ul.util_menu');
+
 				// 리스트형 메뉴에 포커스가 오면 부모를 호버시킴
 				gnb.find('.depth4')
 					.hover(function(){ 
@@ -517,6 +525,20 @@ hana = __app__ = (function(app){
 						parent = self.parent(), 
 						next = self.next();
 						popupManager.show(parent, next);
+				});
+				
+				gnb_menu.on('movefocusend', function() {
+					var last = gnb_menu.find('>li:last').trigger('mouseenter');
+					if (last.find('ul.btn_sort>li.on').hasClass('list_type')) {
+						last.find('div.depth2_list a:last').focus();
+					} else {
+						last.find('div.deapth2_img a:last').focus();
+					}
+				});
+
+				util_menu.on('movefocusend', function() {
+					var last = util_menu.find('>li:last').trigger('mouseenter');
+					last.find('>div a:last').focus();
 				});
 
 			}	// app.isMouse
@@ -700,8 +722,14 @@ hana = __app__ = (function(app){
 							popupManager.show(null, $(this).next());
 						});
 
-				menus.find('a:last').blur(function() {
-					popupManager.hide();
+				menus.find('a:last').on('keydown', function(e) {
+					if (e.which == 9 && !e.shiftKey){
+						popupManager.hide();
+					}
+				});
+
+				self.find('ul.location_wrap').on('movefocusend', function() {
+					self.find('ul.location_wrap').find('>li:last>div.menu_layer').show().find('a:last').focus();
 				});
 			}
 
@@ -749,19 +777,19 @@ hana = __app__ = (function(app){
 				.data('created', true)
 				.dialog({ autoOpen: false, modal: true })
 				.css({top:'-200px', left:'-50px'})
-				.unbind('dialogopen dialogoutfocus')
-				.bind('dialogopen', function(){
+				.off('dialogopen.hana dialogoutfocus.hana')
+				.on('dialogopen.hana', function(){
 					$("div.ui-widget-overlay").css(popupDefault.overlay);
 				})
-				.bind('dialogoutfocus', function(){
+				.on('dialogoutfocus.hana', function(){
 					dialog.find('a.ui_dialog_close').focus();
 				})
 				.find('>div.laypop')
 					.css('zIndex', 1005)
 					.end()
 				.find('a.ui_dialog_close')
-					.unbind('.dialog')
-					.bind('click.dialog', function(e){ 
+					.off('click.hana')
+					.on('click.hana', function(e){ 
 						e.preventDefault(); 						
 						dialog.dialog('close');
 					})
@@ -789,7 +817,7 @@ hana = __app__ = (function(app){
 
 				var dialog = popupDefault.create(self.next().clone());
 				dialog
-					.bind('dialogclose', function(){
+					.on('dialogclose', function(){
 						dialog.dialog('destroy').remove();
 						self.focus();
 					})
@@ -823,8 +851,8 @@ hana = __app__ = (function(app){
 					close = $('.ui_dialog_close', dialog),
 					showDialog = function() {
 						dialog					
-							.bind('dialogclose.dialog', function(){
-								dialog.unbind('dialogclose.dialog');
+							.on('dialogclose.hana', function(){
+								dialog.off('dialogclose.hana');
 								dialog.dialog('destroy').remove();
 								link && link.focus(), link = null;
 							})
@@ -893,8 +921,8 @@ hana = __app__ = (function(app){
 				$popup.attr('href', json['original']);
 			};
 		
-		$dialog.unbind('dialogclose')
-			.on('dialogclose', function(){
+		$dialog.off('dialogclose.hana')
+			.on('dialogclose.hana', function(){
 				$link && $link.focus(), $link = null;
 			});
 
@@ -927,7 +955,7 @@ hana = __app__ = (function(app){
 
 			$this.find('>a').each(function(){
 					var type = this.className.replace('btn_', '');
-					$(this).unbind().bind('click', function(e){
+					$(this).off('.hana').on('click.hana', function(e){
 						e.preventDefault();
 
 						switch(type){
@@ -969,7 +997,7 @@ hana = __app__ = (function(app){
 			var self = $(this),
 				content = $(self.data('content'));
 
-			self.bind('click', function(e){
+			self.on('click', function(e){
 				self.parent().animate({height: 0}, {complete: function(){ self.parent().hide(); }});
 				if(trigger('beforeload').call(self, content) === false) return;
 				content.show();
@@ -1398,6 +1426,9 @@ $(function(){
 	// 터치디바이스일 때 body에 ui_touch 클래스를 추가
 	app.isTouch && $(document.body).addClass('ui_touch');
 	
+	var gnb = $('#gnb'),
+		loc = $('#location_wrap');
+
 	// 현재페이지의 메뉴를 활성화시키기 위해 페이지코드와 국가코드를 넘김
 	var option = {
 		pageCode: (typeof pageCode == 'undefined' ? '' : pageCode),
@@ -1405,60 +1436,89 @@ $(function(){
 	};
 
 	// GNB
-	var gnb = (function(gnb){
-		var dropmenu_links = gnb.find('a.ui_dropmenu');
-
-		// 탭순서를 위한 키이벤트 바인딩
-		gnb.on('keydown', 'a.ui_dropmenu', function(e) {
-			var index = dropmenu_links.index(this);
-			if (index > 0 && e.which == 9 && e.shiftKey) {					
-				var self = $(this), 
-					prev = dropmenu_links.eq(index - 1).parent(),
-					prev_con = prev.parent(),
-					layer;
-				
-				if (prev.length === 0) return;
-				e.preventDefault();
-
-				prev.trigger('mouseenter'), layer = prev.find('>div');
-				if (prev_con.hasClass('depth1_navi')) {
-					if (layer.find('ul.btn_sort>li.on').addClass('list_type')) {
-						layer.find('div.depth2_list a:last').focus();
-					} else {
-						layer.find('div.deapth2_img a:last').focus();
-					}
-				} else if (prev_con.hasClass('util_menu')) {
-					layer.find('a:last').focus();
-				}
-			}
-		});
-		return gnb;
-	})($('#gnb').hanaGNB(option));
-
-	(function(loc) {
-		if (loc.length == 0) return;
-
-		// Location
-		loc.hanaLocation(option);
-
-		// 탭키
-		loc.find('ul.location_wrap>li').first().find('a').on('keydown', function(e) {
-			if (e.which == 9 && e.shiftKey) {
-				e.preventDefault();
-				gnb.find('ul.depth1_navi>li:last').trigger('mouseenter').find('>div a:last').focus();
-			}
-		});
-	})($('#location_wrap'));
+	gnb.hanaGNB(option);
+	loc.hanaLocation(option);
 
 	// 대다수의 페이지에 공유하기 버튼이 존재하기에 강제로 바인딩
 	$('div.sns_wrap').hanaShare();
 
-	$('#contents').on('focus',  'a:first', function() {
-		app.popupManager.hide();
-	});
+	if (app.isMouse) {
+		// 탭순서를 위한 키이벤트 바인딩
+		gnb
+		.find('a.ui_dropmenu:eq(2)').on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {
+				gnb.find('ul.util_menu>li').trigger('mouseenter').find('>div a:last').focus();
+				e.preventDefault();
+			}
+		})
+		.end()
+		.find('a.ui_dropmenu:gt(2)').on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {					
+				var self = $(this), 
+					prev = self.parent().prev(),
+					layer;
+				
+				e.preventDefault();
 
-	$('#main_content').on('focus', '.control_wrap a', function() {
-		app.popupManager.hide();
-	});
+				prev.trigger('mouseenter'), layer = prev.find('>div');
+				if (layer.find('ul.btn_sort>li.on').addClass('list_type')) {
+					layer.find('div.depth2_list a:last').focus();
+				} else {
+					layer.find('div.deapth2_img a:last').focus();
+				}
+			}
+		});
+		
+		// 탭키
+		loc.find('ul.location_wrap>li>a.more:eq(0)').on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {
+				e.preventDefault();
+				gnb.find('ul.depth1_navi').trigger('movefocusend');
+			}
+		})
+		.end()
+		.find('ul.location_wrap>li>a.more:gt(0)').on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {
+				var self = $(this), 
+					prev = self.parent().prev(),
+					layer = prev.find('div');
+				e.preventDefault();
+				
+				prev.find('>a').trigger('mouseenter');
+				layer.find('a:last').focus();
+			}
+		});
 
+		$('#contents').find(':focusable:first').on('focus', function() {
+			app.popupManager.hide();
+		}).on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {
+				if (loc.size() > 0) {
+					e.preventDefault();
+					loc.find('ul.location_wrap').trigger('movefocusend');
+					return;
+				}
+				if (gnb.size() > 0) {
+					e.preventDefault();
+					gnb.find('ul.depth1_navi').trigger('movefocusend');
+				}
+			}
+		});
+
+		$('#main_content').find('.control_wrap a:first').on('focus', function() {
+			app.popupManager.hide();
+		}).on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {
+				if (loc.size() > 0) {
+					e.preventDefault();
+					loc.find('ul.location_wrap').trigger('movefocusend');
+					return;
+				}
+				if (gnb.size() > 0) {
+					e.preventDefault();
+					gnb.find('ul.depth1_navi').trigger('movefocusend');
+				}			
+			}
+		});
+	}
 });
