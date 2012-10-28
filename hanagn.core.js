@@ -497,15 +497,20 @@ hana = __app__ = (function(app){
 					});
 
 				// 팝업 레이어 표시를 위한 바인딩
+				gnb					
+					.find('ul.depth1_navi .depth2_list a:last, ul.depth1_navi .deapth2_img a:last').on('keydown', function(e) {
+						if (e.which == 9 && !e.shiftKey) {
+							popupManager.hide();
+						}
+					});
+
+				gnb.find('.util_menu a.ui_dropmenu:first').on('keydown', function(e) {
+					if (e.which == 9 && e.shiftKey) {
+						popupManager.hide();
+					}
+				});
+				
 				gnb
-					.find('ul.util_menu a:first').focus(function(e){
-						popupManager.hide();
-					})
-					.end()
-					.find('ul.depth1_navi a:last').blur(function() {
-						popupManager.hide();
-					})
-					.end()
 					.on('mouseenter mouseleave', 'li:has(>a.ui_dropmenu)', function(e) {
 						var self = $(this), etype = e.type;
 						switch (etype) {
@@ -1445,6 +1450,15 @@ $(function(){
 	if (app.isMouse) {
 		// 탭순서를 위한 키이벤트 바인딩
 		gnb
+		.find('a.ui_dropmenu:eq(1)').on('keydown', function(e) {
+			if (e.which == 9 && e.shiftKey) {
+				var self = $(this),
+					prev = self.parent().prev();
+				prev.trigger('mouseenter').find('>div a:last').focus();
+				e.preventDefault();
+			}
+		})
+		.end()
 		.find('a.ui_dropmenu:eq(2)').on('keydown', function(e) {
 			if (e.which == 9 && e.shiftKey) {
 				gnb.find('ul.util_menu>li').trigger('mouseenter').find('>div a:last').focus();
