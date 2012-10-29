@@ -123,10 +123,10 @@ hana = __app__ = (function(app){
 				}
             }
         }		
-		
+
         return Class;
     };
-		
+
 	Class.statical = function(s){ return s }; 
 })();
 
@@ -167,11 +167,11 @@ hana = __app__ = (function(app){
 		}
 		return now;
 	};
-	
+
 	// 마우스관련 이벤트 무효과
 	$.fn.preventMouseEvent = function(option) {
 		var o = $.extend({
-			
+
 		}, option);
 
 		if (app.isTouch) {
@@ -179,7 +179,7 @@ hana = __app__ = (function(app){
 		}
 
 		return this.each(function(){
-			
+
 			this.onclick = this.onselectstart = this.ondragstart = this.onmousedown = function(event){
 				event = event || window.event;
 
@@ -245,7 +245,7 @@ hana = __app__ = (function(app){
 
 			C.off('.hana').on('selectstart.hana', function (e) { e.preventDefault(); }).swipe(swipeOptions);
 		}
-		
+
 		return this.each(function(i){
 			if ($.checkBuild(this, 'galleryslider')) return;
 
@@ -270,7 +270,7 @@ hana = __app__ = (function(app){
 
 					var left = 0, old_current = current;
 					current = $.nextNumber(total, current, dim);		
-					
+
 					if (dim > 0) { // <<<<<
 						if (direction) {
 							C.append(C.find('li:first')).css('left', 0);
@@ -291,19 +291,19 @@ hana = __app__ = (function(app){
 						}
 					});
 				};
-			
+
 			C.css({'width': width * total});
 			caption();
-			
+
 			// 이미지가 하나 이하일 때는 슬라이더 기능 미구현
 			if (total <= 1) {
 				return B.add(N).hide(), false;
 			}			
-			
+
 			if(app.isMouse) B.hoverClass('on');
 			B.on('click', function(e){
 				e.preventDefault();
-				
+
 				var self = $(this), dim = self.data('dim');
 				rep(dim);	
 				if (dim == 1) {
@@ -312,7 +312,7 @@ hana = __app__ = (function(app){
 					o.onPrevClick.call(this, current, $.nextNumber(total, current, -1));
 				}			
 			});
-			
+
 			// 이전 버튼을 0.7초 이상 누르고 있으면 자동넘김
 			app.isMouse && (function(){				
 				var timer = null,
@@ -330,7 +330,7 @@ hana = __app__ = (function(app){
 				}).on('mouseup', function(e){
 					stopTimer();
 				});			
-				
+
 				C.on('click', function(){
 					stopTimer();			
 				});
@@ -338,13 +338,13 @@ hana = __app__ = (function(app){
 
 		});
 	};
-	
+
 	/**
 	 * 탭컨트롤 모듈
 	 **/
 	$.fn.hanaTabs = function(option) {
 		option = $.extend({}, option);
-		
+
 		function getTabNumber(className){
 			var m =  className.match(/([a-z]+)_([0-9]+)/i);
 			return {
@@ -353,7 +353,7 @@ hana = __app__ = (function(app){
 				num: m && m.length>2 ? parseInt(m[2]) : 1
 			};
 		}
-		
+
 		return this.each(function(i){
 			if ($.checkBuild(this, 'tabs')) return;
 
@@ -363,7 +363,7 @@ hana = __app__ = (function(app){
 				$contents = $this.find('>ul>li>.ui_tab_content'),
 				initTN = getTabNumber($this[0].className),
 				tabNo = parseInt($this.attr('data-tab') || initTN.num) - 1;
-			
+
 			$lis.each(function(idx){
 				var self = $(this), 
 					btn = self.find('>a'), 
@@ -389,7 +389,7 @@ hana = __app__ = (function(app){
 			$lis.eq(tabNo).find('>a').trigger('click');
 		});
 	};
-	
+
 	$.fn.hanaGlobalTabs = $.fn.hanaTabs;
 
 	// 페이지내에서 레이어가 단일로 표시되도록 관리 하기위한 ...
@@ -403,7 +403,7 @@ hana = __app__ = (function(app){
 				popupManager.hide();
 			}
 		});	
-		
+
 		return {
 			hide: function(){
 				activeDropbox && activeDropbox.hide();
@@ -417,14 +417,14 @@ hana = __app__ = (function(app){
 		};
 	})();
 
-	
-			
+
+
 	// GNB
 	$.fn.hanaGNB = function(option){
 		var o = $.extend({
-		
+
 		}, option);
-		
+
 		var showLayer = function(e) {
 
 		};
@@ -480,7 +480,7 @@ hana = __app__ = (function(app){
 						parent = self.parent(), 
 						next = self.next(), 
 						isActive = next.is(':visible');
-					
+
 					isActive && popupManager.hide();
 					!isActive && popupManager.show(parent, next);							
 				});
@@ -510,6 +510,40 @@ hana = __app__ = (function(app){
 					}
 				});
 				
+				// 탭순서를 위한 키이벤트 바인딩
+				gnb.find('ul.util_menu a.ui_dropmenu:last').on('keydown', function(e) {
+						if (e.which == 9 && e.shiftKey) {
+							var self = $(this),
+								prev = self.parent().prev();
+							prev.trigger('mouseenter').find('>div a:last').focus();
+							e.preventDefault();
+						}
+					});
+
+				gnb.find('ul.depth1_navi>li>a:eq(0)').on('keydown', function(e) {
+						if (e.which == 9 && e.shiftKey) {
+							gnb.find('ul.util_menu>li').trigger('mouseenter').find('>div a:last').focus();
+							e.preventDefault();
+						}
+					});
+
+				gnb.find('ul.depth1_navi>li>a:gt(0)').on('keydown', function(e) {
+					if (e.which == 9 && e.shiftKey) {					
+						var self = $(this), 
+							prev = self.parent().prev(),
+							layer;
+
+						e.preventDefault();
+
+						prev.trigger('mouseenter'), layer = prev.find('>div');
+						if (layer.find('ul.btn_sort>li.on').addClass('list_type')) {
+							layer.find('div.depth2_list a:last').focus();
+						} else {
+							layer.find('div.deapth2_img a:last').focus();
+						}
+					}
+				})
+
 				gnb
 					.on('mouseenter mouseleave', 'li:has(>a.ui_dropmenu)', function(e) {
 						var self = $(this), etype = e.type;
@@ -524,16 +558,17 @@ hana = __app__ = (function(app){
 						e.preventDefault();
 						e.stopPropagation();
 					});
-					
+
 				dropmenu_links.focus(function(e) {
 					var self = $(this), 
 						parent = self.parent(), 
 						next = self.next();
 						popupManager.show(parent, next);
 				});
-				
+
 				gnb_menu.on('movefocusend', function() {
 					var last = gnb_menu.find('>li:last').trigger('mouseenter');
+					alert(9);
 					if (last.find('ul.btn_sort>li.on').hasClass('list_type')) {
 						last.find('div.depth2_list a:last').focus();
 					} else {
@@ -547,7 +582,7 @@ hana = __app__ = (function(app){
 				});
 
 			}	// app.isMouse
-			
+
 			// 이미지형 메뉴 //////////////////////////////////////////////////////////////
 			var img_layers = gnb.find('div.deapth2_img'),
 				regex = /\{\{page\}\}/ig,
@@ -582,7 +617,7 @@ hana = __app__ = (function(app){
 					// ul left 이동
 					movingAnimate = function(page_idx, noanimate) {
 						var left = -(ITEM_WIDTH * ITEM_COUNT * page_idx);
-						
+
 						if (noanimate === false) {
 							items.find('>a').show();
 							img_panel.stop().css({left: left});
@@ -620,7 +655,7 @@ hana = __app__ = (function(app){
 					var m = $(this).data({index: idx, page: Math.floor(idx / ITEM_COUNT)}),
 						n = (idx + 1) % ITEM_COUNT,
 						isEnd = n == 0;
-					
+
 					// 목록의 끝에서 탭키를 눌렸을 때 다음 페이지로 이동시킨 후 첫번째 항목에 포커싱
 					if (isEnd && items.length - 1 !== idx) {
 						m.children().on('keydown', function(e) {
@@ -650,7 +685,7 @@ hana = __app__ = (function(app){
 						movingAnimate(idx, doAnimate);
 					});
 				}).eq(0).addClass('on');
-			
+
 
 				img_panel
 					.swipe({
@@ -716,7 +751,7 @@ hana = __app__ = (function(app){
 			if ($.checkBuild(this, 'location')) return;
 
 			var self = $(this), menus = self.find('ul.location_wrap>li');
-			
+
 			if (app.isMouse) {
 				menus
 					.on('mouseleave', function() {
@@ -735,6 +770,18 @@ hana = __app__ = (function(app){
 
 				self.find('ul.location_wrap').on('movefocusend', function() {
 					self.find('ul.location_wrap').find('>li:last>div.menu_layer').show().find('a:last').focus();
+				});
+
+				loc.find('ul.location_wrap>li>a.more:gt(0)').on('keydown', function(e) {
+					if (e.which == 9 && e.shiftKey) {
+						var self = $(this), 
+							prev = self.parent().prev(),
+							layer = prev.find('div');
+						e.preventDefault();
+
+						prev.find('>a').trigger('mouseenter');
+						layer.find('a:last').focus();
+					}
 				});
 			}
 
@@ -841,7 +888,7 @@ hana = __app__ = (function(app){
 			width: 780
 		}, option);
 
-		
+
 		return this.each(function(){
 			if ($.checkBuild(this, 'video')) return;
 
@@ -894,7 +941,7 @@ hana = __app__ = (function(app){
 			});
 		});
 	};
-	
+
 	/**
 	 * 팝업레이어 형식의 갤러리 모듈
 	 **/
@@ -918,14 +965,14 @@ hana = __app__ = (function(app){
 					.parent()
 						.next(".ui-widget-overlay")
 							.css(popupDefault.overlay);
-				
+
 				$dialog.find('>div.laypop').css('zIndex', 1005);
 				$media.attr({'src': json['url'], 'alt': json['title']});
 				$title.html(json['title']);
 				$content.html(json['content']);
 				$popup.attr('href', json['original']);
 			};
-		
+
 		$dialog.off('dialogclose.hana')
 			.on('dialogclose.hana', function(){
 				$link && $link.focus(), $link = null;
@@ -947,7 +994,7 @@ hana = __app__ = (function(app){
 			});
 		});
 	};
-	
+
 	/**
 	 * SNS 공유하기 위한 팝업 오픈
 	 **/
@@ -1009,7 +1056,7 @@ hana = __app__ = (function(app){
 				trigger('load').call(self, content);
 				e.preventDefault();
 			});
-			
+
 		});
 	}
 
@@ -1081,22 +1128,22 @@ hana = __app__ = (function(app){
 				toggleButton = function() {
 					wrapper.find('>p.tab_banner').removeClass('on').eq(current).addClass('on');
 				},
-								
+
 				change = function(idx) {
 					if (idx === current || banners.eq(current).data('animated')) { return; }
-					
+
 					var b = banners.filter(':visible');				
 					banners.eq(idx).data('animated', true).fadeIn('slow', function(){ $(this).data('animated', false); });
 					b.fadeOut('slow', function(){ $(this).data('animated', false); });
 
 					current = idx, toggleButton();
 				};
-			
+
 			if (banners.length <= 1) {
 				wrapper.hide();
 				return;
 			}
-			
+
 			if( !txt_tmpl) {
 				alert('not exist control_tmpl!!');
 			}
@@ -1127,7 +1174,7 @@ hana = __app__ = (function(app){
 				e.preventDefault();
 				stop(), oplay.focus();
 			});
-			
+
 			if (app.isMouse) {
 				items.preventMouseEvent();
 
@@ -1145,7 +1192,7 @@ hana = __app__ = (function(app){
 					}
 				});
 			}
-			
+
 			banners.find('a').swipe({
 					allowPageScroll: 'vertical',
 					threshold: 50,
@@ -1430,7 +1477,7 @@ $(function(){
 
 	// 터치디바이스일 때 body에 ui_touch 클래스를 추가
 	app.isTouch && $(document.body).addClass('ui_touch');
-	
+
 	var gnb = $('#gnb'),
 		loc = $('#location_wrap');
 
@@ -1448,58 +1495,13 @@ $(function(){
 	$('div.sns_wrap').hanaShare();
 
 	if (app.isMouse) {
-		// 탭순서를 위한 키이벤트 바인딩
-		gnb
-		.find('a.ui_dropmenu:eq(1)').on('keydown', function(e) {
-			if (e.which == 9 && e.shiftKey) {
-				var self = $(this),
-					prev = self.parent().prev();
-				prev.trigger('mouseenter').find('>div a:last').focus();
-				e.preventDefault();
-			}
-		})
-		.end()
-		.find('a.ui_dropmenu:eq(2)').on('keydown', function(e) {
-			if (e.which == 9 && e.shiftKey) {
-				gnb.find('ul.util_menu>li').trigger('mouseenter').find('>div a:last').focus();
-				e.preventDefault();
-			}
-		})
-		.end()
-		.find('a.ui_dropmenu:gt(2)').on('keydown', function(e) {
-			if (e.which == 9 && e.shiftKey) {					
-				var self = $(this), 
-					prev = self.parent().prev(),
-					layer;
-				
-				e.preventDefault();
 
-				prev.trigger('mouseenter'), layer = prev.find('>div');
-				if (layer.find('ul.btn_sort>li.on').addClass('list_type')) {
-					layer.find('div.depth2_list a:last').focus();
-				} else {
-					layer.find('div.deapth2_img a:last').focus();
-				}
-			}
-		});
-		
+
 		// 탭키
 		loc.find('ul.location_wrap>li>a.more:eq(0)').on('keydown', function(e) {
 			if (e.which == 9 && e.shiftKey) {
 				e.preventDefault();
 				gnb.find('ul.depth1_navi').trigger('movefocusend');
-			}
-		})
-		.end()
-		.find('ul.location_wrap>li>a.more:gt(0)').on('keydown', function(e) {
-			if (e.which == 9 && e.shiftKey) {
-				var self = $(this), 
-					prev = self.parent().prev(),
-					layer = prev.find('div');
-				e.preventDefault();
-				
-				prev.find('>a').trigger('mouseenter');
-				layer.find('a:last').focus();
 			}
 		});
 
@@ -1519,7 +1521,7 @@ $(function(){
 			}
 		});
 
-		$('#main_content').find('.control_wrap a:first').on('focus', function() {
+		$('#main_content').find('.control_wrap a:lt(2)').on('focus', function() {
 			app.popupManager.hide();
 		}).on('keydown', function(e) {
 			if (e.which == 9 && e.shiftKey) {
@@ -1528,8 +1530,10 @@ $(function(){
 					loc.find('ul.location_wrap').trigger('movefocusend');
 					return;
 				}
+				alert('?');
 				if (gnb.size() > 0) {
 					e.preventDefault();
+					alert(88);
 					gnb.find('ul.depth1_navi').trigger('movefocusend');
 				}			
 			}
